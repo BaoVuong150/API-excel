@@ -45,17 +45,10 @@ Sử dụng các tài khoản này trên Postman để lấy Token:
 
 ---
 
-## 🧪 Hướng dẫn Tự tạo Dữ liệu & Test Khả năng Chịu tải (Dành cho Quản lý)
+## 🧪 Hướng dẫn Kịch bản Test Khả năng Chịu tải (Dành cho Quản lý)
 
-Hệ thống được thiết kế để không bao giờ "Chết" (Crash) dù file tải lên có chứa rác hay kích thước khổng lồ đến mức nào. Bạn có thể sử dụng script `generate_test_files.js` đính kèm trong thư mục gốc để tự động sinh ra 2 file Excel hạng nặng phục vụ cho việc kiểm thử tính toàn vẹn:
+Hệ thống được thiết kế để không bao giờ "Chết" (Crash) dù file tải lên có chứa rác hay kích thước khổng lồ đến mức nào. Tại thư mục gốc của dự án, chúng tôi đã chuẩn bị sẵn 2 file Excel hạng nặng phục vụ cho việc kiểm thử tính toàn vẹn:
 
-**Cách tạo file Test:**
-Mở Terminal tại thư mục gốc và chạy lệnh sau (Yêu cầu có Node.js cài sẵn trên máy):
-```bash
-npm install exceljs
-node generate_test_files.js
-```
-Hệ thống sẽ tự động sinh ra 2 file ở thư mục gốc:
 1. **`Test_10K768_Rows.xlsx`**: File chứa 10.768 dòng (Được gài sẵn 5% dòng lỗi xen kẽ để test Sổ Nam Tào).
 2. **`Test_3M689_Rows.xlsx`**: File chứa 3.689.000 dòng (Được chia làm 4 Sheet để lách giới hạn 1 triệu dòng vật lý của Excel, cũng được gài 5% lỗi để test tràn RAM).
 
