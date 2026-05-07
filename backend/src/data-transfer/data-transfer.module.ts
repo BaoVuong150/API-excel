@@ -3,13 +3,15 @@ import { DataTransferController } from './data-transfer.controller';
 import { DataTransferService } from './data-transfer.service';
 import { BullModule } from '@nestjs/bullmq';
 import { ExcelImportProcessor } from './excel-import.processor';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/entities/user.entity';
 import { CleanupCron } from './cleanup.cron';
 
 import { UserQueryAdapter } from './export/user-query.adapter';
 import { ExcelWriterAdapter } from './export/excel-writer.adapter';
 import { ExcelExportProcessor } from './export/excel-export.processor';
+
+import { UsersModule } from '../users/users.module';
+import { ExcelReaderAdapter } from './adapters/excel-reader.adapter';
+import { ReportWriterAdapter } from './adapters/report-writer.adapter';
 
 @Module({
   imports: [
@@ -21,8 +23,8 @@ import { ExcelExportProcessor } from './export/excel-export.processor';
     BullModule.registerQueue({
       name: 'excel-export',
     }),
-    // Cấp quyền thao tác với bảng Users cho module này
-    TypeOrmModule.forFeature([User]),
+    // Phụ thuộc vào UsersModule để xử lý DB (Clean Architecture)
+    UsersModule,
   ],
   controllers: [DataTransferController],
   providers: [
@@ -31,7 +33,9 @@ import { ExcelExportProcessor } from './export/excel-export.processor';
     CleanupCron,
     UserQueryAdapter,
     ExcelWriterAdapter,
-    ExcelExportProcessor
+    ExcelExportProcessor,
+    ExcelReaderAdapter,
+    ReportWriterAdapter
   ],
 })
 export class DataTransferModule {}

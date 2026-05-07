@@ -13,4 +13,13 @@ export class UsersService {
   async findOneByName(name: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { name } });
   }
+
+  /**
+   * Đẩy một lô dữ liệu khổng lồ vào Database.
+   * Đây là nơi duy nhất được quyền chọc vào bảng User.
+   */
+  async bulkUpsert(users: User[]): Promise<void> {
+    if (users.length === 0) return;
+    await this.usersRepository.upsert(users, ['name']);
+  }
 }

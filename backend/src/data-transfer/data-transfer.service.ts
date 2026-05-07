@@ -1,19 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import * as fs from 'fs';
-import * as ExcelJS from 'exceljs';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from '../users/entities/user.entity';
 import { validateAndMapUserRow } from './utils/row-validator.util';
+
+// Thợ phụ (Adapters)
+import { ExcelReaderAdapter } from './adapters/excel-reader.adapter';
+import { ReportWriterAdapter } from './adapters/report-writer.adapter';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class DataTransferService {
   constructor(
     @InjectQueue('excel-import') private readonly excelQueue: Queue,
-    @InjectRepository(User) private readonly usersRepository: Repository<User>
-  ) { }
+    private readonly usersService: UsersService,
+    private readonly excelReader: ExcelReaderAdapter,
+    private readonly reportWriter: ReportWriterAdapter
+  ) {}
 
   /**
    * Đẩy file thật vào Hàng Đợi (Queue)
@@ -46,12 +48,8 @@ export class DataTransferService {
     try {
       console.log(`[⚙️ SERVICE] Bắt đầu dùng ống hút Stream đọc file...`);
 
-      const options = {
-        sharedStrings: 'cache',
-        worksheets: 'emit',
-      };
-
-      const workbook = new ExcelJS.stream.xlsx.WorkbookReader(filePath, options as any);
+      // Sử dụng Adapter để múc luồng Stream lên
+      const workbook = this.excelReader.createStream(filePath);
 
       let totalRows = 0;
       let totalErrors = 0;
@@ -80,13 +78,13 @@ export class DataTransferService {
         for await (const worksheet of workbook as any) {
           let isSheetValid = true;
           // Mỗi Sheet có cấu trúc cột riêng, phải reset lại bản đồ
-          const colMap: Record<string, number> = {}; 
+          const colMap: Record<string, number> = {};
 
           for await (const row of worksheet as any) {
             if (!row.hasValues) continue;
 
             if (row.number === 1) {
-              row.eachCell((cell, colNumber) => {
+              row.eachCell((cell: any, colNumber: number) => {
                 const cellValue = cell.value ? String(cell.value).trim().toLowerCase() : '';
                 if (expectedHeaders.includes(cellValue)) colMap[cellValue] = colNumber;
               });
@@ -99,7 +97,7 @@ export class DataTransferService {
                   if (errorReport.length < 10000) {
                     errorReport.push(`Sheet '${worksheet.name}': Bỏ qua toàn bộ vì thiếu cột bắt buộc [${h}].`);
                   }
-                  break; 
+                  break;
                 }
               }
               continue; // Soi xong dòng 1 thì lướt tiếp xuống dòng 2
@@ -109,7 +107,7 @@ export class DataTransferService {
             if (!isSheetValid) continue;
 
             totalRows++; // Đếm mọi dòng (dù đúng hay sai)
-            
+
             // 💓 BÁO CÁO NHỊP TIM: Cứ soi xong 1.000 dòng (bất kể rác hay sạch), báo cáo còn sống để tua lại Đồng hồ
             if (totalRows % BATCH_SIZE === 0) {
               resetHeartbeat();
@@ -117,7 +115,7 @@ export class DataTransferService {
 
             // 🛡️ LÕI EPIC 5: Đưa vào máy chém Validator
             const validation = validateAndMapUserRow(row, colMap, row.number);
-            
+
             if (!validation.isValid) {
               totalErrors++;
               // Giới hạn chỉ lưu 10.000 lỗi đầu tiên để chống tràn RAM (Memory Leak)
@@ -140,8 +138,8 @@ export class DataTransferService {
               const batchArray = Array.from(batchMap.values());
               console.log(`[📦 BATCH] Đang xả Bulk Upsert xuống DB... (${batchArray.length} dòng). RAM: ${ramUsage} MB`);
 
-              // 🛡️ LÕI EPIC 4: Bắn phá DB bằng 1 câu SQL duy nhất
-              await this.usersRepository.upsert(batchArray, ['name']);
+              // 🛡️ LÕI EPIC 4: Nhờ UsersService Bắn phá DB bằng 1 câu SQL duy nhất
+              await this.usersService.bulkUpsert(batchArray);
 
               batchMap.clear();
               rowsSinceLastFlush = 0;
@@ -156,7 +154,7 @@ export class DataTransferService {
         if (batchMap.size > 0) {
           const finalBatchArray = Array.from(batchMap.values());
           console.log(`[📦 BATCH CUỐI] Đang xả nốt ${finalBatchArray.length} dòng còn dư xuống DB...`);
-          await this.usersRepository.upsert(finalBatchArray, ['name']);
+          await this.usersService.bulkUpsert(finalBatchArray);
           batchMap.clear();
         }
       };
@@ -178,25 +176,19 @@ export class DataTransferService {
           });
       });
 
-      // 🛡️ EPIC 5: Lưu sổ Nam Tào (Báo cáo lỗi) ra file JSON nếu có lỗi
+      // 🛡️ EPIC 5: Lưu sổ Nam Tào (Báo cáo lỗi) ra file JSON nếu có lỗi qua Adapter
       let reportPath = null;
       if (errorReport.length > 0) {
         reportPath = `uploads/error_report_${Date.now()}.json`;
-        fs.writeFileSync(reportPath, JSON.stringify({
-          totalRows,
-          totalErrors,
-          errors: errorReport
-        }, null, 2));
+        this.reportWriter.writeErrorReport(reportPath, totalRows, totalErrors, errorReport);
         console.log(`[📝 SERVICE] Có ${totalErrors} dòng bị lỗi! Đã xuất báo cáo tại: ${reportPath}`);
       }
-      
+
       console.log(`[✅ SERVICE] Hoàn thành! Thành công: ${totalRows} dòng. Thất bại: ${totalErrors} dòng.`);
       return { success: true, totalRows, totalErrors, reportPath, processedAt: new Date() };
     } finally {
-      if (filePath && fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log(`[🧹 SERVICE] Đã quét sạch rác: Xóa file ${filePath}`);
-      }
+      // Nhờ ReportWriter quét dọn rác
+      this.reportWriter.deleteFile(filePath);
     }
   }
 }
