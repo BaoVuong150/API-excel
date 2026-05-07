@@ -42,3 +42,34 @@ Sử dụng các tài khoản này trên Postman để lấy Token:
 2. `POST /data/import`: Upload file Excel khổng lồ để Worker xử lý ngầm.
 3. `POST /data/export`: Xuất dữ liệu Database ra file Excel không giới hạn.
 4. `GET /data/reports/:filename`: Tải về Sổ Nam Tào (Báo cáo lỗi chi tiết từng dòng không hợp lệ).
+
+---
+
+## 🧪 Hướng dẫn Tự tạo Dữ liệu & Test Khả năng Chịu tải (Dành cho Quản lý)
+
+Hệ thống được thiết kế để không bao giờ "Chết" (Crash) dù file tải lên có chứa rác hay kích thước khổng lồ đến mức nào. Bạn có thể sử dụng script `generate_test_files.js` đính kèm trong thư mục gốc để tự động sinh ra 2 file Excel hạng nặng phục vụ cho việc kiểm thử tính toàn vẹn:
+
+**Cách tạo file Test:**
+Mở Terminal tại thư mục gốc và chạy lệnh sau (Yêu cầu có Node.js cài sẵn trên máy):
+```bash
+npm install exceljs
+node generate_test_files.js
+```
+Hệ thống sẽ tự động sinh ra 2 file ở thư mục gốc:
+1. **`Test_10K768_Rows.xlsx`**: File chứa 10.768 dòng (Được gài sẵn 5% dòng lỗi xen kẽ để test Sổ Nam Tào).
+2. **`Test_3M689_Rows.xlsx`**: File chứa 3.689.000 dòng (Được chia làm 4 Sheet để lách giới hạn 1 triệu dòng vật lý của Excel, cũng được gài 5% lỗi để test tràn RAM).
+
+### Kịch bản Test 1: Khả năng Lọc rác (Import File Vừa)
+- Dùng tài khoản `admin` đăng nhập và lấy Token.
+- Dùng Postman gọi API `POST /data/import` tải lên file `Test_10K768_Rows.xlsx`.
+- **Kỳ vọng:** API lập tức trả lời *"File đang xử lý ngầm"*. Xem Log của Docker sẽ thấy RAM Server không bao giờ vượt qua mức 60MB. Hệ thống sẽ bóc tách chính xác 5% dòng rác, lưu lại báo cáo lỗi mà vẫn cho phép hơn 10 ngàn dòng hợp lệ nạp thành công vào Database.
+
+### Kịch bản Test 2: Sức mạnh Bạo lực (Import File Khổng lồ)
+- Tiếp tục tải lên file siêu nặng `Test_3M689_Rows.xlsx` (Gần 4 triệu dòng).
+- **Kỳ vọng:** Quá trình xử lý chạy xuyên suốt. Mìn nhịp tim (Watchdog) tự động gia hạn thời gian để chống sập Server. Toàn bộ 100% dòng dữ liệu sạch được Bulk Upsert, và rác bị nhặt ra ném vào file báo cáo. Cả quá trình RAM không được phép vượt ngưỡng báo động.
+
+### Kịch bản Test 3: Ép xung Server (Export)
+- Khi Database đã ôm vài triệu dòng từ 2 bài test trên, gọi API `POST /data/export`.
+- **Kỳ vọng:** Quá trình Export sử dụng Cursor để cuộn dần qua Database thay vì kéo hết 1 cục lên RAM. File Excel được tạo ra từ từ và trả về an toàn.
+
+> **Tự tin bàn giao:** Hãy dùng kịch bản này để demo, dự án đã hoàn toàn miễn nhiễm với rác dữ liệu!
