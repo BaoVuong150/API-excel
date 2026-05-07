@@ -53,11 +53,12 @@ Hệ thống được thiết kế để không bao giờ "Chết" (Crash) dù f
    File chứa 10.768 dòng (Được gài sẵn 5% dòng lỗi xen kẽ để test Sổ Nam Tào). Bạn có thể dùng luôn.
 
 2. **`Test_3M689_Rows.xlsx` (File Siêu Bạo Lực - Nặng 114MB)**: 
-   Vì GitHub cấm lưu trữ file > 100MB, file này không được đính kèm. Để có file này, bạn chỉ cần mở Terminal ở thư mục gốc và chạy lệnh:
+   Vì GitHub cấm lưu trữ file > 100MB, file này không được đính kèm. Bạn không cần phải cài đặt Node.js hay NPM vào máy tính của mình. Để sinh ra file này, bạn chỉ cần lợi dụng thẳng máy ảo Docker đang chạy bằng 2 lệnh sau:
    ```bash
-   node generate_test_files.js
+   docker exec -it nestjs_api node generate_test_files.js
+   docker cp nestjs_api:/usr/src/app/Test_3M689_Rows.xlsx .
    ```
-   *(File sẽ được tự động sinh ra trong vòng 2 phút).*
+   *(Lệnh đầu tiên bắt máy ảo sinh ra file, lệnh thứ hai copy file đó từ máy ảo ra ngoài thư mục của bạn).*
 
 > ⚠️ **CẢNH BÁO SINH TỬ DÀNH CHO QUẢN LÝ:** 
 > Tuyệt đối **KHÔNG click đúp** để mở file 3.6 triệu dòng này bằng phần mềm Microsoft Excel thông thường trên máy tính cá nhân. File này được chia làm 4 Sheet khổng lồ, nếu cố tình mở lên, phần mềm Excel sẽ treo và đứng máy tính ngay lập tức. 
