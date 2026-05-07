@@ -5,3 +5,7 @@ uploads/
 .idea/
 .vscode/
 .gemini/
+*.md
+*.html
+context/
+!backend/README.md
