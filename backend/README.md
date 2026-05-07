@@ -61,18 +61,35 @@ Hệ thống được thiết kế để không bao giờ "Chết" (Crash) dù f
    *(Lệnh đầu tiên bắt máy ảo sinh ra file, lệnh thứ hai copy file đó từ máy ảo ra ngoài thư mục của bạn).*
 
 > ⚠️ **CẢNH BÁO SINH TỬ DÀNH CHO QUẢN LÝ:** 
-> Tuyệt đối **KHÔNG click đúp** để mở file 3.6 triệu dòng này bằng phần mềm Microsoft Excel thông thường trên máy tính cá nhân. File này được chia làm 4 Sheet khổng lồ, nếu cố tình mở lên, phần mềm Excel sẽ treo và đứng máy tính ngay lập tức. 
-> **Cách Test đúng:** Chỉ cần chọn file này trong Postman và bấm Upload thẳng lên hệ thống API của chúng ta!
+> Tuyệt đối **KHÔNG click đúp** để mở file 3.6 triệu dòng này bằng phần mềm Microsoft Excel thông thường trên máy tính cá nhân. File này được chia làm 4 Sheet khổng lồ, nếu cố tình mở lên, phần mềm Excel sẽ treo và đứng máy tính ngay lập tức. Cả phần mềm Postman cũng có thể bị đứng máy nếu bạn cố gắng Upload file quá nặng bằng giao diện. Thay vào đó, hãy dùng lệnh `curl` dưới đây.
 
 ### Kịch bản Test 1: Khả năng Lọc rác (Import File Vừa)
-- Dùng tài khoản `admin` đăng nhập và lấy Token.
-- Dùng Postman gọi API `POST /data/import` tải lên file `Test_10K768_Rows.xlsx`.
-- **Kỳ vọng:** API lập tức trả lời *"File đang xử lý ngầm"*. Xem Log của Docker sẽ thấy RAM Server không bao giờ vượt qua mức 60MB. Hệ thống sẽ bóc tách chính xác 5% dòng rác, lưu lại báo cáo lỗi mà vẫn cho phép hơn 10 ngàn dòng hợp lệ nạp thành công vào Database.
+Thay vì dùng phần mềm Postman, hãy mở Terminal/PowerShell tại thư mục gốc và dội thẳng lệnh `curl` vào hệ thống:
+
+**1. Đăng nhập lấy thẻ Token:**
+```bash
+curl -s -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"admin123\"}"
+```
+*(Hãy copy đoạn mã `access_token` dài loằng ngoằng vừa hiện ra).*
+
+**2. Bắn file Excel lên Server (Thay `<TOKEN>` bằng đoạn mã vừa copy):**
+```bash
+curl -s -X POST http://localhost:3000/data/import -H "Authorization: Bearer <TOKEN>" -F "file=@./Test_10K768_Rows.xlsx"
+```
+- **Kỳ vọng:** Lệnh `curl` sẽ trả về *"File đang xử lý ngầm"* ngay lập tức (Không bị treo Terminal). Mở một Terminal khác gõ `docker logs -f nestjs_api` để xem tiến trình. RAM Server không bao giờ vượt qua 60MB, bóc tách chính xác 5% dòng rác thành Sổ Nam Tào.
 
 ### Kịch bản Test 2: Sức mạnh Bạo lực (Import File Khổng lồ)
-- Tiếp tục tải lên file siêu nặng `Test_3M689_Rows.xlsx` (Gần 4 triệu dòng).
-- **Kỳ vọng:** Quá trình xử lý chạy xuyên suốt. Mìn nhịp tim (Watchdog) tự động gia hạn thời gian để chống sập Server. Toàn bộ 100% dòng dữ liệu sạch được Bulk Upsert, và rác bị nhặt ra ném vào file báo cáo. Cả quá trình RAM không được phép vượt ngưỡng báo động.
+Tiếp tục dùng Token đó bắn thẳng file siêu nặng (114MB) vào hệ thống:
+```bash
+curl -s -X POST http://localhost:3000/data/import -H "Authorization: Bearer <TOKEN>" -F "file=@./Test_3M689_Rows.xlsx"
+```
+- **Kỳ vọng:** Quá trình upload qua LAN/Localhost mất vài giây. Sau đó Server chạy xuyên suốt nhiều giờ. Mìn nhịp tim tự động gia hạn để bảo vệ Server. 100% dòng sạch được Bulk Upsert, và RAM tuyệt đối không vượt ngưỡng báo động.
 
 ### Kịch bản Test 3: Ép xung Server (Export)
-- Khi Database đã ôm vài triệu dòng từ 2 bài test trên, gọi API `POST /data/export`.
-- **Kỳ vọng:** Quá trình Export sử dụng Cursor để cuộn dần qua Database thay vì kéo hết 1 cục lên RAM. File Excel được tạo ra từ từ và trả về an toàn.
+Khi Database đã ôm vài triệu dòng từ 2 bài test trên, gọi API xuất dữ liệu:
+```bash
+curl -X POST http://localhost:3000/data/export -H "Authorization: Bearer <TOKEN>" -o "Xuat_Du_Lieu.xlsx"
+```
+- **Kỳ vọng:** Quá trình Export sử dụng Cursor cuộn dần qua Database. File `Xuat_Du_Lieu.xlsx` sẽ dần dần phình to trên máy tính của bạn và tải về an toàn.
+
+> **Tự tin bàn giao:** Hãy dùng bảng lệnh `curl` dũng mãnh này để demo cho Sếp, dự án đã hoàn toàn miễn nhiễm với rác dữ liệu và rủi ro sập phần mềm từ phía Client (Postman)!
