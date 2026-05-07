@@ -47,10 +47,21 @@ Sử dụng các tài khoản này trên Postman để lấy Token:
 
 ## 🧪 Hướng dẫn Kịch bản Test Khả năng Chịu tải (Dành cho Quản lý)
 
-Hệ thống được thiết kế để không bao giờ "Chết" (Crash) dù file tải lên có chứa rác hay kích thước khổng lồ đến mức nào. Tại thư mục gốc của dự án, chúng tôi đã chuẩn bị sẵn 2 file Excel hạng nặng phục vụ cho việc kiểm thử tính toàn vẹn:
+Hệ thống được thiết kế để không bao giờ "Chết" (Crash) dù file tải lên có chứa rác hay kích thước khổng lồ đến mức nào. Dưới đây là 2 file test và cách sử dụng:
 
-1. **`Test_10K768_Rows.xlsx`**: File chứa 10.768 dòng (Được gài sẵn 5% dòng lỗi xen kẽ để test Sổ Nam Tào).
-2. **`Test_3M689_Rows.xlsx`**: File chứa 3.689.000 dòng (Được chia làm 4 Sheet để lách giới hạn 1 triệu dòng vật lý của Excel, cũng được gài 5% lỗi để test tràn RAM).
+1. **`Test_10K768_Rows.xlsx` (Đã có sẵn trên GitHub)**: 
+   File chứa 10.768 dòng (Được gài sẵn 5% dòng lỗi xen kẽ để test Sổ Nam Tào). Bạn có thể dùng luôn.
+
+2. **`Test_3M689_Rows.xlsx` (File Siêu Bạo Lực - Nặng 114MB)**: 
+   Vì GitHub cấm lưu trữ file > 100MB, file này không được đính kèm. Để có file này, bạn chỉ cần mở Terminal ở thư mục gốc và chạy lệnh:
+   ```bash
+   node generate_test_files.js
+   ```
+   *(File sẽ được tự động sinh ra trong vòng 2 phút).*
+
+> ⚠️ **CẢNH BÁO SINH TỬ DÀNH CHO QUẢN LÝ:** 
+> Tuyệt đối **KHÔNG click đúp** để mở file 3.6 triệu dòng này bằng phần mềm Microsoft Excel thông thường trên máy tính cá nhân. File này được chia làm 4 Sheet khổng lồ, nếu cố tình mở lên, phần mềm Excel sẽ treo và đứng máy tính ngay lập tức. 
+> **Cách Test đúng:** Chỉ cần chọn file này trong Postman và bấm Upload thẳng lên hệ thống API của chúng ta!
 
 ### Kịch bản Test 1: Khả năng Lọc rác (Import File Vừa)
 - Dùng tài khoản `admin` đăng nhập và lấy Token.
@@ -64,5 +75,3 @@ Hệ thống được thiết kế để không bao giờ "Chết" (Crash) dù f
 ### Kịch bản Test 3: Ép xung Server (Export)
 - Khi Database đã ôm vài triệu dòng từ 2 bài test trên, gọi API `POST /data/export`.
 - **Kỳ vọng:** Quá trình Export sử dụng Cursor để cuộn dần qua Database thay vì kéo hết 1 cục lên RAM. File Excel được tạo ra từ từ và trả về an toàn.
-
-> **Tự tin bàn giao:** Hãy dùng kịch bản này để demo, dự án đã hoàn toàn miễn nhiễm với rác dữ liệu!
