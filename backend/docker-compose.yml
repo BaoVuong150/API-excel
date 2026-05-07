@@ -1,0 +1,54 @@
+
+services:
+  # Dịch vụ Database (Chạy bản PostgreSQL siêu nhẹ)
+  db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      POSTGRES_DB: user_management
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Lưu lại dữ liệu không bị mất khi tắt máy ảo
+
+  # Dịch vụ Message Queue (Redis) để xử lý file 10 triệu dòng
+  redis:
+    image: redis:7-alpine
+    container_name: redis_queue
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data # Lưu dữ liệu chờ của Queue
+
+  # Dịch vụ Backend API của bạn
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nestjs_api
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASS=adminpassword
+      - DB_NAME=user_management
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      # Ánh xạ thư mục src ở máy Windows thẳng vào máy ảo. 
+      # Nghĩa là bạn gõ code ở máy bạn, máy ảo tự nhận và reload lập tức.
+      - ./src:/usr/src/app/src
+    depends_on:
+      - db # Đảm bảo DB chạy lên hoàn toàn rồi API mới được phép chạy
+      - redis # Đảm bảo Redis chạy lên thì API mới chạy
+
+volumes:
+  postgres_data:
+  redis_data:
