@@ -5,8 +5,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { ExcelImportProcessor } from './excel-import.processor';
 import { CleanupCron } from './cleanup.cron';
 
-import { UserQueryAdapter } from './export/user-query.adapter';
-import { ExcelWriterAdapter } from './export/excel-writer.adapter';
+import { UserQueryAdapter } from './adapters/user-query.adapter';
+import { ExcelWriterAdapter } from './adapters/excel-writer.adapter';
 import { ExcelExportProcessor } from './export/excel-export.processor';
 
 import { UsersModule } from '../users/users.module';

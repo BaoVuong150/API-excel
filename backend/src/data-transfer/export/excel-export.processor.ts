@@ -1,8 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
-import { UserQueryAdapter } from './user-query.adapter';
-import { ExcelWriterAdapter } from './excel-writer.adapter';
+import { UserQueryAdapter } from '../adapters/user-query.adapter';
+import { ExcelWriterAdapter } from '../adapters/excel-writer.adapter';
 
 @Processor('excel-export', { concurrency: 1 }) // 🛡️ Concurrency = 1: Tránh DDoS Hàng đợi và nghẽn ổ cứng
 export class ExcelExportProcessor extends WorkerHost {
