@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { DataTransferController } from './data-transfer.controller';
 import { DataTransferService } from './data-transfer.service';
 import { BullModule } from '@nestjs/bullmq';
-import { ExcelImportProcessor } from './excel-import.processor';
-import { CleanupCron } from './cleanup.cron';
+import { ExcelImportProcessor } from './import/excel-import.processor';
+import { CleanupCron } from './cron/cleanup.cron';
 
 import { UserQueryAdapter } from './adapters/user-query.adapter';
 import { ExcelWriterAdapter } from './adapters/excel-writer.adapter';

@@ -9,3 +9,5 @@ uploads/
 *.html
 context/
 !backend/README.md
+*.xlsx
+error_report*.json

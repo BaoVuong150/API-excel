@@ -22,4 +22,11 @@ export class UsersService {
     if (users.length === 0) return;
     await this.usersRepository.upsert(users, ['name']);
   }
+
+  /**
+   * Cắm ống hút để xuất dữ liệu
+   */
+  async streamAllUsers() {
+    return this.usersRepository.createQueryBuilder('user').stream();
+  }
 }

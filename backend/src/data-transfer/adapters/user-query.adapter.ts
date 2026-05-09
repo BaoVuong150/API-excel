@@ -1,17 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+import { UsersService } from '../../users/users.service';
 
 @Injectable()
 export class UserQueryAdapter {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {}
+  constructor(private readonly usersService: UsersService) {}
 
   async createDataStream() {
-    // 🛡️ Bơm dữ liệu từng giọt (Stream), tuyệt đối không load hết lên RAM
-    return this.userRepository.createQueryBuilder('user').stream();
+    // 🛡️ Bơm dữ liệu từng giọt (Stream), giao việc chọc DB cho UsersService
+    return this.usersService.streamAllUsers();
   }
 }

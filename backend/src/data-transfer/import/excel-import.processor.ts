@@ -1,6 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { DataTransferService } from './data-transfer.service';
+import { DataTransferService } from '../data-transfer.service';
 
 export interface ExcelImportJobData {
   filePath: string;
